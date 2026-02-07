@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy
+pyodbc
+pydantic
+pydantic-settings
+python-multipart
+httpx
+python-docx
+pypdf
+pandas
+openpyxl
+websockets
+docling
+psycopg2-binary
+pgvector
+ollama

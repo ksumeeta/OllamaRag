@@ -1,0 +1,16 @@
+services:
+  db-vector:
+    image: ankane/pgvector:latest
+    container_name: ollama_rag_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: rag_vector_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:

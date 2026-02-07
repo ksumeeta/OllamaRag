@@ -1,0 +1,96 @@
+Error processing upload: 'PdfPipelineOptions' object has no attribute 'backend'
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 37, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 44, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 39, in process_and_index_document
+    conv_res = converter.convert(file_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\pydantic\_internal\_validate_call.py", line 39, in wrapper_function
+    return wrapper(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\pydantic\_internal\_validate_call.py", line 136, in __call__
+    res = self.__pydantic_validator__.validate_python(pydantic_core.ArgsKwargs(args, kwargs))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 325, in convert
+    return next(all_res)
+           ^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 368, in convert_all
+    for conv_res in conv_res_iter:
+                    ^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 445, in _convert
+    for input_batch in chunkify(
+                       ^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\utils\utils.py", line 15, in chunkify
+    for first in iterator:  # Take the first element from the iterator
+                 ^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\datamodel\document.py", line 467, in docs
+    backend = options.backend
+              ^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\pydantic\main.py", line 1026, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'PdfPipelineOptions' object has no attribute 'backend'
+
+--------------------------------------------------
+Error processing upload: File format not allowed: test_ingestion.txt
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 37, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 46, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 41, in process_and_index_document
+    conv_res = converter.convert(file_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\pydantic\_internal\_validate_call.py", line 39, in wrapper_function
+    return wrapper(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\pydantic\_internal\_validate_call.py", line 136, in __call__
+    res = self.__pydantic_validator__.validate_python(pydantic_core.ArgsKwargs(args, kwargs))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 325, in convert
+    return next(all_res)
+           ^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 368, in convert_all
+    for conv_res in conv_res_iter:
+                    ^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 467, in _convert
+    for item in map(
+                ^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 518, in _process_document
+    raise ConversionError(error_message)
+docling.exceptions.ConversionError: File format not allowed: test_ingestion.txt
+
+--------------------------------------------------
+Error processing upload: File format not allowed: test_ingestion.txt
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 37, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 43, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 38, in process_and_index_document
+    conv_res = converter.convert(file_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\pydantic\_internal\_validate_call.py", line 39, in wrapper_function
+    return wrapper(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\pydantic\_internal\_validate_call.py", line 136, in __call__
+    res = self.__pydantic_validator__.validate_python(pydantic_core.ArgsKwargs(args, kwargs))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 325, in convert
+    return next(all_res)
+           ^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 368, in convert_all
+    for conv_res in conv_res_iter:
+                    ^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 467, in _convert
+    for item in map(
+                ^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\venv\Lib\site-packages\docling\document_converter.py", line 518, in _process_document
+    raise ConversionError(error_message)
+docling.exceptions.ConversionError: File format not allowed: test_ingestion.txt
+
+--------------------------------------------------

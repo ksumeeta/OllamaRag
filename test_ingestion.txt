@@ -1,0 +1,15 @@
+This is a test document for the RAG system.
+It contains information about the "Project Alpha".
+Project Alpha is a secret initiative to build a better search engine.
+The timeline for Project Alpha is Q4 2024.
+The budget is $1,000,000.
+Key stakeholders include:
+- Alice (Manager)
+- Bob (Developer)
+- Charlie (Designer)
+
+Safety protocols must be followed at all times.
+In case of emergency, contact the safety officer at 555-0100.
+Documentation is mandatory for all code changes.
+Review meetings are held every Friday at 10 AM.
+This concludes the test document.
