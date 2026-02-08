@@ -1,6 +1,9 @@
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+from docling.document_converter import (DocumentConverter, PdfFormatOption, WordFormatOption)
+from docling.datamodel.pipeline_options import (PdfPipelineOptions, TableFormerMode, 
+                                                AcceleratorOptions, AcceleratorDevice,TesseractCliOcrOptions)
 from docling.chunking import HybridChunker
+from docling.datamodel.base_models import InputFormat
+
 from sqlalchemy.orm import Session
 from app.core.database import VectorSessionLocal
 from app.models.vector_models import DocumentChunk
@@ -21,17 +24,19 @@ logger.info(f"CUDA version: {torch.version.cuda}")
 logger.info(f"GPU device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'None'}")
 
 # Setup Docling Pipeline
-# pipeline_options = PdfPipelineOptions()
-# pipeline_options.do_ocr = True
-# pipeline_options.do_table_structure = True
-# pipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
+pdfpipeline_options = PdfPipelineOptions()
+pdfpipeline_options.do_ocr = True
+pdfpipeline_options.do_table_structure = True
+pdfpipeline_options.table_structure_options.mode = TableFormerMode.ACCURATE
+pdfpipeline_options.accelerator_options = AcceleratorOptions(num_threads=4, device=AcceleratorDevice.AUTO)
+pdfpipeline_options.ocr_options = TesseractCliOcrOptions(lang=["auto"])
 
-converter = DocumentConverter()
-#     format_options={
-#         "pdf": PdfFormatOption(pipeline_options=pipeline_options),
-#         "docx": PdfFormatOption(pipeline_options=pipeline_options) 
-#     }
-# )
+converter = DocumentConverter(
+    format_options={
+        "pdf": PdfFormatOption(pipeline_options=pdfpipeline_options)
+    }
+)
+# converter = DocumentConverter()
 
 import os
 # ... (existing imports)
@@ -45,51 +50,12 @@ def get_embedding(text: str) -> list[float]:
 def process_and_index_document(file_path: str, doc_id: str):
     logger.info(f"Processing file: {file_path}")
     
-    # MANUAL TEXT PROCESSING
-    if file_path.lower().endswith(".txt"):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                text_content = f.read()
-            
-            # Simple paragraph split
-            raw_chunks = [c.strip() for c in text_content.split("\n\n") if c.strip()]
-            logger.info(f"Generated {len(raw_chunks)} chunks from text file.")
-            
-            if not VectorSessionLocal:
-                logger.warning("Vector DB not configured. Skipping indexing.")
-                return text_content
-
-            vector_db = VectorSessionLocal()
-            try:
-                for chunk_text in raw_chunks:
-                    embedding = get_embedding(chunk_text)
-                    db_chunk = DocumentChunk(
-                        doc_id=doc_id,
-                        text=chunk_text,
-                        embedding=embedding,
-                        metadata_json=json.dumps({"filename": os.path.basename(file_path), "page": 1})
-                    )
-                    vector_db.add(db_chunk)
-                vector_db.commit()
-                logger.info(f"Indexed {len(raw_chunks)} text chunks.")
-            except Exception as e:
-                vector_db.rollback()
-                logger.error(f"Indexing failed: {e}")
-                raise e
-            finally:
-                vector_db.close()
-                
-            return text_content
-
-        except Exception as e:
-            logger.error(f"Text processing failed: {e}")
-            raise e
-
     # 1. Convert Document (Docling)
     try:
         conv_res = converter.convert(file_path)
         doc = conv_res.document
         logger.info(f"Document converted. Pages: {len(doc.pages)}")
+        #logger.info(f"Document converted. Pages: {len(doc.pages)}\n-------------\n{doc.export_to_markdown()}\n-------------\n")
     except Exception as e:
         logger.error(f"Docling conversion failed: {e}")
         raise e
@@ -111,6 +77,8 @@ def process_and_index_document(file_path: str, doc_id: str):
     vector_db = VectorSessionLocal()
     try:
         for i, chunk in enumerate(chunks):
+            logger.info(f"\n--------------Processing chunk {i+1}/{len(chunks)}")
+            #logger.info(f"\n--------------Processing chunk {i+1}/{len(chunks)} chunk.text: \n{chunk.text}\n--------------------\n\n")    
             text_content = chunk.text
             meta = chunk.meta.export_json_dict()
             
