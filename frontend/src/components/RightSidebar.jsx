@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Search, FileText, Globe, Database, Cpu, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, Search, FileText, Globe, Database, Cpu, ChevronRight, ChevronDown, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 const RightSidebar = ({
@@ -8,7 +8,9 @@ const RightSidebar = ({
     contextFlags,
     setContextFlags,
     chatId,
-    attachments = []
+    attachments = [],
+    overwriteMode,
+    setOverwriteMode
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
@@ -68,6 +70,24 @@ const RightSidebar = ({
                 </div>
                 <p className="text-xs text-muted-foreground">
                     {contextFlags.useLLMData ? "Model uses internal training data." : "Model restricted to provided context only."}
+                </p>
+
+                {/* Overwrite Toggle (Moved from Left Sidebar) */}
+                <div className="flex items-center justify-between group mt-4">
+                    <div className="flex items-center gap-2">
+                        <RefreshCw size={16} className={overwriteMode ? "text-red-500" : "text-muted-foreground"} />
+                        <span className="text-sm text-foreground">Overwrite Files</span>
+                    </div>
+                    <button
+                        onClick={() => setOverwriteMode(!overwriteMode)}
+                        className={`w-10 h-5 rounded-full relative transition-colors ${overwriteMode ? 'bg-primary' : 'bg-muted'}`}
+                        title={overwriteMode ? "Existing files will be replaced" : "Uploads will fail if file exists"}
+                    >
+                        <div className={`w-3 h-3 bg-background rounded-full absolute top-1 transition-transform ${overwriteMode ? 'left-6' : 'left-1'}`} />
+                    </button>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                    {overwriteMode ? "CAUTION: Existing files will be replaced." : "Uploads will fail if file exists."}
                 </p>
 
                 {/* Toggle Item */}

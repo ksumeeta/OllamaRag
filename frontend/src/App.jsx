@@ -21,6 +21,28 @@ function App() {
     };
   });
 
+  const [backendOnline, setBackendOnline] = useState(false);
+  const [overwriteMode, setOverwriteMode] = useState(false);
+
+  const checkBackendStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/');
+      if (response.ok) {
+        setBackendOnline(true);
+      } else {
+        setBackendOnline(false);
+      }
+    } catch (e) {
+      setBackendOnline(false);
+    }
+  };
+
+  useEffect(() => {
+    checkBackendStatus();
+    const interval = setInterval(checkBackendStatus, 60000); // Check every 60 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('contextFlags', JSON.stringify(contextFlags));
   }, [contextFlags]);
@@ -67,6 +89,7 @@ function App() {
           onNewChat={handleNewChat}
           onSelectChat={handleSelectChat}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
+          backendOnline={backendOnline}
         />
 
         {/* Main Content */}
@@ -79,6 +102,7 @@ function App() {
                   chat={activeChat}
                   onChatUpdate={refreshChats}
                   contextFlags={contextFlags} // Pass flags
+                  overwriteMode={overwriteMode}
                 // toggleRightSidebar removed
                 />
               </div>
@@ -90,6 +114,8 @@ function App() {
                 setContextFlags={setContextFlags}
                 chatId={activeChat?.id}
                 attachments={activeChat?.attachments}
+                overwriteMode={overwriteMode}
+                setOverwriteMode={setOverwriteMode}
               />
             </div>
           ) : (

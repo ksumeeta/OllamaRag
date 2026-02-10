@@ -1,8 +1,7 @@
-import React from 'react';
 import { Plus, MessageSquare, Search, Menu, X, Tag } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-export default function Sidebar({ isOpen, chats, activeChat, onNewChat, onSelectChat, onToggle }) {
+export default function Sidebar({ isOpen, chats, activeChat, onNewChat, onSelectChat, onToggle, backendOnline }) {
     return (
         <div
             className={cn(
@@ -64,11 +63,11 @@ export default function Sidebar({ isOpen, chats, activeChat, onNewChat, onSelect
                 ))}
             </div>
 
-            {/* Bottom User/Settings Area could go here */}
-            <div className="p-4 border-t border-border">
+            {/* Bottom User/Settings Area */}
+            <div className="p-4 border-t border-border space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span>Local System Online</span>
+                    <div className={cn("w-2 h-2 rounded-full", backendOnline ? "bg-green-500" : "bg-red-500")}></div>
+                    <span>{backendOnline ? "Local System Online" : "Local System Offline"}</span>
                 </div>
             </div>
         </div>

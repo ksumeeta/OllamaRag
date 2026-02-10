@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { getChat, getModels, uploadFile, getStreamUrl } from '../services/api';
+import { getChat, getModels, uploadFile, getStreamUrl, updateChat } from '../services/api';
 import { cn } from '../lib/utils';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 
@@ -50,7 +50,7 @@ const parseContent = (content) => {
     return { thought, response };
 };
 
-export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggleRightSidebar }) {
+export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggleRightSidebar, overwriteMode }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [models, setModels] = useState([]);
@@ -174,7 +174,7 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                 const uploadResults = await Promise.all(
                     currentAttachments.map(async (att) => {
                         if (att.isPending) {
-                            const uploaded = await uploadFile(att.file);
+                            const uploaded = await uploadFile(att.file, overwriteMode);
                             return uploaded.id;
                         }
                         return att.id;
@@ -238,6 +238,12 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                 },
                 onmessage(msg) {
                     if (msg.data === '[DONE]') {
+                        // Stop the stream and retry loop manually
+                        setIsLoading(false);
+                        setAbortController(null);
+                        onChatUpdate();
+                        loadChatData();
+                        controller.abort();
                         return;
                     }
                     const parsed = JSON.parse(msg.data);
@@ -270,6 +276,10 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                     }
                 },
                 onclose() {
+                    // This handles server-side close. 
+                    // To prevent auto-retry by fetch-event-source, we must throw.
+                    // However, we only get here if [DONE] wasn't handled (e.g. error or premature close).
+
                     setMessages(prev => {
                         const newMsgs = [...prev];
                         const lastMsg = newMsgs[newMsgs.length - 1];
@@ -280,13 +290,18 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                         }
                         return newMsgs;
                     });
+
                     setIsLoading(false);
                     setAbortController(null);
                     onChatUpdate();
-                    loadChatData(); // Fetch latest data (including augmented content)
+                    loadChatData();
+
+                    // Throw to stop retry
+                    throw new Error("STREAM_CLOSED_BY_SERVER");
                 },
                 onerror(err) {
-                    if (err.name === 'AbortError') {
+                    if (err.name === 'AbortError' || err.message === 'STREAM_CLOSED_BY_SERVER') {
+                        // Expected termination
                         return;
                     }
                     console.error("Stream error", err);
@@ -298,7 +313,7 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                 }
             });
         } catch (error) {
-            if (error.name !== 'AbortError') {
+            if (error.name !== 'AbortError' && error.message !== 'STREAM_CLOSED_BY_SERVER') {
                 console.error("Error sending message", error);
                 setIsLoading(false);
                 setAbortController(null);
@@ -489,11 +504,7 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
 
             {/* Input Area (Keep as is just pass through) */}
             <div className="p-4 border-t border-border bg-card">
-                {/* ... existing input area code ... */}
-                {/* Reuse from previous but ensure we don't break it. 
-                     Ideally I should only replace the return block or handle carefully.
-                     Since I'm replacing lines 316 to end, I must include the Input Area correctly.
-                  */}
+                {/* Prepare Input Area */}
                 {/* Attachments Preview */}
                 {attachments.length > 0 && (
                     <div className="flex gap-2 mb-2 overflow-x-auto pb-2">

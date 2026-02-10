@@ -1,8 +1,8 @@
-from docling.document_converter import (DocumentConverter, PdfFormatOption, WordFormatOption)
+from docling.document_converter import (DocumentConverter, PdfFormatOption, WordFormatOption, InputFormat)
 from docling.datamodel.pipeline_options import (PdfPipelineOptions, TableFormerMode, 
                                                 AcceleratorOptions, AcceleratorDevice,TesseractCliOcrOptions)
 from docling.chunking import HybridChunker
-from docling.datamodel.base_models import InputFormat
+# from docling.datamodel.base_models import InputFormat
 
 from sqlalchemy.orm import Session
 from app.core.database import VectorSessionLocal
@@ -52,10 +52,17 @@ def process_and_index_document(file_path: str, doc_id: str):
     
     # 1. Convert Document (Docling)
     try:
-        conv_res = converter.convert(file_path)
+        if file_path.lower().endswith(".txt"):
+            logger.info("Detected .txt file. Using convert_string with InputFormat.MD.")
+            with open(file_path, "r", encoding="utf-8") as f:
+                text_content = f.read()
+            conv_res = converter.convert_string(text_content, format=InputFormat.MD)
+        else:
+            conv_res = converter.convert(file_path)
+            
         doc = conv_res.document
-        logger.info(f"Document converted. Pages: {len(doc.pages)}")
-        #logger.info(f"Document converted. Pages: {len(doc.pages)}\n-------------\n{doc.export_to_markdown()}\n-------------\n")
+        # logger.info(f"Document converted. Pages: {len(doc.pages)}")
+        logger.info(f"Document converted. Pages: {len(doc.pages)}\n-------------\n{doc.export_to_markdown()}\n-------------\n")
     except Exception as e:
         logger.error(f"Docling conversion failed: {e}")
         raise e
@@ -77,8 +84,8 @@ def process_and_index_document(file_path: str, doc_id: str):
     vector_db = VectorSessionLocal()
     try:
         for i, chunk in enumerate(chunks):
-            logger.info(f"\n--------------Processing chunk {i+1}/{len(chunks)}")
-            #logger.info(f"\n--------------Processing chunk {i+1}/{len(chunks)} chunk.text: \n{chunk.text}\n--------------------\n\n")    
+            # logger.info(f"\n--------------Processing chunk {i+1}/{len(chunks)}")
+            logger.info(f"\nProcessing chunk {i+1}/{len(chunks)} chunk.text:\n-------------\n{chunk.text}\n--------------------\n")    
             text_content = chunk.text
             meta = chunk.meta.export_json_dict()
             
@@ -138,5 +145,28 @@ def retrieve_relevant_chunks(query: str, doc_ids: list[str], top_k: int = 5) -> 
     except Exception as e:
         logger.error(f"Retrieval failed: {e}")
         return []
+    finally:
+        vector_db.close()
+
+def delete_document_chunks(doc_id: str):
+    """
+    Deletes all chunks associated with a specific doc_id from the Vector DB.
+    """
+    if not VectorSessionLocal:
+        logger.warning("Vector DB not configured. Skipping deletion.")
+        return
+
+    vector_db = VectorSessionLocal()
+    try:
+        # Delete chunks with matching doc_id
+        # Note: Depending on your vector DB/ORM, this might need adjustment.
+        # For PGVector with SQLAlchemy:
+        deleted_count = vector_db.query(DocumentChunk).filter(DocumentChunk.doc_id == doc_id).delete()
+        vector_db.commit()
+        logger.info(f"Deleted {deleted_count} chunks for doc_id: {doc_id}")
+    except Exception as e:
+        vector_db.rollback()
+        logger.error(f"Deletion failed for doc_id {doc_id}: {e}")
+        raise e
     finally:
         vector_db.close()

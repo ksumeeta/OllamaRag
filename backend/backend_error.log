@@ -222,3 +222,171 @@ Traceback (most recent call last):
 docling.exceptions.ConversionError: File format not allowed: SumeetMF.txt
 
 --------------------------------------------------
+Error processing upload: File format not allowed: AnviMF.txt
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 86, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 61, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 55, in process_and_index_document
+    conv_res = converter.convert(file_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\pydantic\_internal\_validate_call.py", line 39, in wrapper_function
+    return wrapper(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\pydantic\_internal\_validate_call.py", line 136, in __call__
+    res = self.__pydantic_validator__.validate_python(pydantic_core.ArgsKwargs(args, kwargs))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 235, in convert
+    return next(all_res)
+           ^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 258, in convert_all
+    for conv_res in conv_res_iter:
+                    ^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 293, in _convert
+    for item in map(
+                ^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 343, in _process_document
+    raise ConversionError(error_message)
+docling.exceptions.ConversionError: File format not allowed: AnviMF.txt
+
+--------------------------------------------------
+Error processing upload: 'DocumentConverter' object has no attribute 'convert_string'
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 59, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 70, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 61, in process_and_index_document
+    conv_res = converter.convert_string(content=text_content, format=InputFormat.MD)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DocumentConverter' object has no attribute 'convert_string'
+
+--------------------------------------------------
+Error processing upload: File format not allowed: test_upload.txt
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 86, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 72, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 63, in process_and_index_document
+    conv_res = converter.convert(file_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\pydantic\_internal\_validate_call.py", line 39, in wrapper_function
+    return wrapper(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\pydantic\_internal\_validate_call.py", line 136, in __call__
+    res = self.__pydantic_validator__.validate_python(pydantic_core.ArgsKwargs(args, kwargs))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 235, in convert
+    return next(all_res)
+           ^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 258, in convert_all
+    for conv_res in conv_res_iter:
+                    ^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 293, in _convert
+    for item in map(
+                ^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 343, in _process_document
+    raise ConversionError(error_message)
+docling.exceptions.ConversionError: File format not allowed: test_upload.txt
+
+--------------------------------------------------
+Error processing upload: File format not allowed: AnviMF.txt
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 59, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 72, in process_and_index_document
+    tokenizer="sentence-transformers/all-MiniLM-L6-v2", # Default, or align with nomic if possible
+    ^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 63, in process_and_index_document
+    doc = conv_res.document
+                   ^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\pydantic\_internal\_validate_call.py", line 39, in wrapper_function
+    return wrapper(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\pydantic\_internal\_validate_call.py", line 136, in __call__
+    res = self.__pydantic_validator__.validate_python(pydantic_core.ArgsKwargs(args, kwargs))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 235, in convert
+    return next(all_res)
+           ^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 258, in convert_all
+    for conv_res in conv_res_iter:
+                    ^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 293, in _convert
+    for item in map(
+                ^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\docling\document_converter.py", line 343, in _process_document
+    raise ConversionError(error_message)
+docling.exceptions.ConversionError: File format not allowed: AnviMF.txt
+
+--------------------------------------------------
+Error processing upload: 'DocumentConverter' object has no attribute 'convert_string'
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 59, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 68, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 59, in process_and_index_document
+    conv_res = converter.convert_string(content=text_content, format=InputFormat.MD)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DocumentConverter' object has no attribute 'convert_string'
+
+--------------------------------------------------
+Error processing upload: 1 validation error for DocumentConverter.convert
+format
+  Unexpected keyword argument [type=unexpected_keyword_argument, input_value=<InputFormat.MD: 'md'>, input_type=InputFormat]
+    For further information visit https://errors.pydantic.dev/2.11/v/unexpected_keyword_argument
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 59, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 68, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 59, in process_and_index_document
+    conv_res = converter.convert(text_content, format=InputFormat.MD)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\pydantic\_internal\_validate_call.py", line 39, in wrapper_function
+    return wrapper(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\k_sum\AppData\Local\Programs\Python\Python312\Lib\site-packages\pydantic\_internal\_validate_call.py", line 136, in __call__
+    res = self.__pydantic_validator__.validate_python(pydantic_core.ArgsKwargs(args, kwargs))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for DocumentConverter.convert
+format
+  Unexpected keyword argument [type=unexpected_keyword_argument, input_value=<InputFormat.MD: 'md'>, input_type=InputFormat]
+    For further information visit https://errors.pydantic.dev/2.11/v/unexpected_keyword_argument
+
+--------------------------------------------------
+Error processing upload: 'DocumentConverter' object has no attribute 'convert_string'
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 59, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 68, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 59, in process_and_index_document
+    conv_res = converter.convert_string(text_content, format=InputFormat.MD)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DocumentConverter' object has no attribute 'convert_string'
+
+--------------------------------------------------
+Error processing upload: 'DocumentConverter' object has no attribute 'convert_string'
+Traceback (most recent call last):
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\api\routers\upload.py", line 59, in upload_file
+    markdown_text = ingestion.process_and_index_document(file_path, doc_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 68, in process_and_index_document
+    raise e
+  File "D:\OneDrive - Micromax Informatics Ltd\TFS\OllamaRAG\backend\app\services\ingestion.py", line 59, in process_and_index_document
+    conv_res = converter.convert_string(text_content, format=InputFormat.MD)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DocumentConverter' object has no attribute 'convert_string'
+
+--------------------------------------------------

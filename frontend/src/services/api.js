@@ -36,9 +36,10 @@ export const updateChat = async (id, data) => {
     return response.data;
 };
 
-export const uploadFile = async (file) => {
+export const uploadFile = async (file, overwrite = false) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('overwrite', overwrite);
     const response = await api.post('/upload', formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
