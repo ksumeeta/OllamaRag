@@ -32,6 +32,7 @@ class Message(Base):
     role = Column(String(50)) # user, assistant, system
     model_used = Column(Unicode(255), nullable=True)
     content = Column(UnicodeText) # NVARCHAR(MAX) in MSSQL
+    thinking_process = Column(UnicodeText, nullable=True) # Stores model's internal reasoning
     augmented_content = Column(UnicodeText, nullable=True) # Full augmented prompt (System + RAG + User)
     routing_reason = Column(Unicode(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

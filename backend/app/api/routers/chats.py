@@ -259,18 +259,29 @@ async def send_message(
             })
             
             # 5. Stream LLM
-            full_response = []
-            async for chunk in ollama_service.stream_chat(message_in.model_used or "llama3", ollama_messages):
-                full_response.append(chunk)
-                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+            full_content = []
+            full_thinking = []
+            
+            async for chunk_data in ollama_service.stream_chat(message_in.model_used or "llama3", ollama_messages):
+                # chunk_data is {"type": "think"|"content", "content": "..."}
+                if chunk_data["type"] == "think":
+                    full_thinking.append(chunk_data["content"])
+                    yield f"data: {json.dumps({'type': 'think', 'chunk': chunk_data['content']})}\n\n"
+                else:
+                    full_content.append(chunk_data["content"])
+                    # detailed type for frontend, fallback compatible if they just check 'chunk'
+                    yield f"data: {json.dumps({'type': 'content', 'chunk': chunk_data['content']})}\n\n"
                 
             # Save Assistant Message
-            response_text = "".join(full_response)
-            if response_text:
+            response_text = "".join(full_content)
+            thinking_text = "".join(full_thinking) if full_thinking else None
+            
+            if response_text or thinking_text:
                 asst_msg = models.Message(
                     chat_id=message_in.chat_id,
                     role="assistant",
                     content=response_text,
+                    thinking_process=thinking_text,
                     model_used=message_in.model_used
                 )
                 new_db.add(asst_msg)

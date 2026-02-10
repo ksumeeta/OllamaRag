@@ -100,9 +100,16 @@
     @apply border-border;
   }
 
-  body,
   html,
   #root {
     @apply h-full w-full bg-background text-foreground overflow-hidden;
+  }
+}
+
+@layer utilities {
+  .prose table td,
+  .prose table th {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
   }
 }

@@ -67,6 +67,8 @@ class Message(MessageBase):
     id: int
     chat_id: int
     created_at: datetime
+    content: str
+    thinking_process: Optional[str] = None
     augmented_content: Optional[str] = None
     attachments: List[Attachment] = []
     contexts: List[MessageContext] = []

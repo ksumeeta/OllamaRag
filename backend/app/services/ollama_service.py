@@ -62,22 +62,34 @@ async def chat_stream_generator(
             yield f"Error calling Ollama: {str(e)}"
 
 # Reworking generator for robustness using line iteration
-async def stream_chat(model: str, messages: List[Dict]) -> AsyncGenerator[str, None]:
+async def stream_chat(model: str, messages: List[Dict], enable_think: bool = True) -> AsyncGenerator[Dict[str, str], None]:
     url = f"{OLLAMA_URL}/api/chat"
     payload = {
         "model": model,
         "messages": messages,
         "stream": True
     }
+    if enable_think:
+        payload["think"] = True 
     
+    in_thinking = False
+
     async with httpx.AsyncClient(timeout=60.0) as client:
         async with client.stream('POST', url, json=payload) as response:
             async for line in response.aiter_lines():
                 if line:
                     try:
                         data = json.loads(line)
-                        if 'message' in data and 'content' in data['message']:
-                            yield data['message']['content']
+                        if 'message' in data:
+                            msg = data['message']
+                            val_thinking = msg.get('thinking', '')
+                            val_content = msg.get('content', '')
+                            
+                            if val_thinking:
+                                yield {"type": "think", "content": val_thinking}
+                            elif val_content:
+                                yield {"type": "content", "content": val_content}
+
                         if data.get('done', False):
                             break
                     except json.JSONDecodeError:
@@ -93,8 +105,9 @@ async def generate_search_query(model: str, user_query: str) -> str:
     ]
     # Non-streaming call
     full_resp = ""
-    async for chunk in stream_chat(model, messages):
-        full_resp += chunk
+    async for chunk_data in stream_chat(model, messages, enable_think=False):
+        if chunk_data["type"] == "content":
+            full_resp += chunk_data["content"]
     return full_resp.strip()
 
 async def execute_web_search(query: str) -> str:

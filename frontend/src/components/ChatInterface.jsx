@@ -272,6 +272,7 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
         // 6. Start Streaming Response
         try {
             let fullResponse = "";
+            let fullThinking = "";
             let isFirstChunk = true;
 
             await fetchEventSource(getStreamUrl(), {
@@ -319,19 +320,30 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                         });
                         throw new Error(parsed.error);
                     }
+
                     if (parsed.chunk !== undefined) {
                         if (isFirstChunk) {
                             // Clear the "File Processed..." or "Processing..." status text
                             // and start showing the real response
                             fullResponse = "";
+                            fullThinking = "";
                             isFirstChunk = false;
                         }
-                        fullResponse += parsed.chunk;
+
+                        const chunkType = parsed.type || 'content';
+
+                        if (chunkType === 'think') {
+                            fullThinking += parsed.chunk;
+                        } else {
+                            fullResponse += parsed.chunk;
+                        }
+
                         setMessages(prev => {
                             const newMsgs = [...prev];
                             const lastMsg = newMsgs[newMsgs.length - 1];
                             if (lastMsg.isStreaming) {
                                 lastMsg.content = fullResponse;
+                                lastMsg.thinking_process = fullThinking;
                             }
                             return newMsgs;
                         });
@@ -508,16 +520,31 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                             {/* ... (existing content rendering) ... */}
                             {/* Message Content */}
                             {/* ... (existing content rendering) ... */}
+                            {/* Message Content */}
                             {(() => {
-                                const { thought, response } = msg.role === 'assistant' ? parseContent(msg.content) : { thought: null, response: msg.content };
+                                // Priority: Explicit thinking_process from DB/Stream > parsed from content
+                                let thought = msg.thinking_process;
+                                let response = msg.content;
+
+                                // Fallback parsing for old messages or if thinking was mixed in content
+                                if (!thought && msg.role === 'assistant') {
+                                    const parsed = parseContent(msg.content);
+                                    if (parsed.thought) {
+                                        thought = parsed.thought;
+                                        response = parsed.response;
+                                    }
+                                }
+
                                 return (
                                     <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                                         {thought && (
-                                            <div className="mb-2 p-3 bg-muted/50 rounded-lg border border-border/50 text-xs text-muted-foreground italic animate-pulse-slow">
-                                                <div className="flex items-center gap-2 mb-1 not-italic font-semibold opacity-70">
+                                            <div className="mb-2 p-3 bg-zinc-100 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700/50 text-sm text-zinc-600 dark:text-zinc-400">
+                                                <div className="flex items-center gap-2 mb-1 font-semibold opacity-70 select-none">
                                                     <Cpu size={12} /> Thinking Process
                                                 </div>
-                                                {thought}
+                                                <div className="whitespace-pre-wrap leading-relaxed">
+                                                    {thought}
+                                                </div>
                                             </div>
                                         )}
                                         {response && (
