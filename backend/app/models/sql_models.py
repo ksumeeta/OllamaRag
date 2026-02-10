@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Table, BigInteger
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Table, BigInteger, Unicode, UnicodeText
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -14,7 +14,7 @@ class Chat(Base):
     __tablename__ = 'Chats'
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), default='New Chat')
+    title = Column(Unicode(255), default='New Chat')
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_archived = Column(Boolean, default=False)
@@ -30,10 +30,10 @@ class Message(Base):
     id = Column(Integer, primary_key=True, index=True)
     chat_id = Column(Integer, ForeignKey('Chats.id', ondelete='CASCADE'))
     role = Column(String(50)) # user, assistant, system
-    model_used = Column(String(255), nullable=True)
-    content = Column(Text) # Start with Text, can be NVARCHAR(MAX) in MSSQL
-    augmented_content = Column(Text, nullable=True) # Full augmented prompt (System + RAG + User)
-    routing_reason = Column(String(500), nullable=True)
+    model_used = Column(Unicode(255), nullable=True)
+    content = Column(UnicodeText) # NVARCHAR(MAX) in MSSQL
+    augmented_content = Column(UnicodeText, nullable=True) # Full augmented prompt (System + RAG + User)
+    routing_reason = Column(Unicode(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     chat = relationship("Chat", back_populates="messages")
@@ -44,7 +44,7 @@ class Tag(Base):
     __tablename__ = 'Tags'
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True)
+    name = Column(Unicode(100), unique=True)
     color = Column(String(20), default='#808080')
     
     chats = relationship("Chat", secondary=chat_tags, back_populates="tags")
@@ -56,11 +56,11 @@ class Attachment(Base):
     message_id = Column(Integer, ForeignKey('Messages.id'), nullable=True)
     chat_id = Column(Integer, ForeignKey('Chats.id', ondelete='CASCADE'), nullable=True)
     
-    file_name = Column(String(255))
-    file_type = Column(String(100))
+    file_name = Column(Unicode(255))
+    file_type = Column(Unicode(100))
     file_size = Column(BigInteger)
-    file_path = Column(String(500))
-    extracted_text = Column(Text, nullable=True) # NVARCHAR(MAX)
+    file_path = Column(Unicode(500))
+    extracted_text = Column(UnicodeText, nullable=True) # NVARCHAR(MAX)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     message = relationship("Message", back_populates="attachments")
@@ -71,9 +71,9 @@ class MessageContext(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(Integer, ForeignKey('Messages.id', ondelete='CASCADE'))
-    document_id = Column(String(255), nullable=True)
-    document_name = Column(String(255))
-    content = Column(Text) # Full text content
+    document_id = Column(Unicode(255), nullable=True)
+    document_name = Column(Unicode(255))
+    content = Column(UnicodeText) # Full text content
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
