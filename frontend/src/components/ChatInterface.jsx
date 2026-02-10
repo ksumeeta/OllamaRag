@@ -60,6 +60,8 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
     const [attachments, setAttachments] = useState([]);
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
+    const scrollContainerRef = useRef(null);
+    const prevMessagesLength = useRef(0);
 
     const [viewPrompt, setViewPrompt] = useState(null);
 
@@ -76,7 +78,17 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
     }, [chat.id]);
 
     useEffect(() => {
-        scrollToBottom();
+        const scrollContainer = scrollContainerRef.current;
+        if (scrollContainer) {
+            const isNewMessage = messages.length > prevMessagesLength.current;
+            // Check if user is near the bottom (within 100px)
+            const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 100;
+
+            if (isNewMessage || isAtBottom) {
+                scrollToBottom();
+            }
+        }
+        prevMessagesLength.current = messages.length;
     }, [messages]);
 
     const scrollToBottom = () => {
@@ -394,7 +406,7 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
                 {/* ... (empty state) ... */}
 
                 {messages.map((msg, idx) => (
