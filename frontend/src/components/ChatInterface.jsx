@@ -229,7 +229,8 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                     use_web_search: contextFlags?.useWebSearch ?? false
                 }),
                 signal: controller.signal,
-                async onopen(response) {
+                openWhenHidden: true, // Prevent auto-retry behavior on tab switch
+                onopen(response) {
                     if (response.ok) {
                         return; // proceed
                     } else {
@@ -301,15 +302,16 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                 },
                 onerror(err) {
                     if (err.name === 'AbortError' || err.message === 'STREAM_CLOSED_BY_SERVER') {
-                        // Expected termination
-                        return;
+                        // Expected termination. Throwing prevents fetch-event-source from retrying.
+                        throw err;
                     }
                     console.error("Stream error", err);
+                    // Always throw to prevent retry
                     if (err.message.includes("Failed to send")) {
                         setIsLoading(false);
                         setAbortController(null);
-                        throw err;
                     }
+                    throw err;
                 }
             });
         } catch (error) {

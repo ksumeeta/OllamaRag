@@ -132,139 +132,146 @@ async def send_message(
          )
          db.commit()
 
-    # 3. Prepare Context
+    # 3. Stream Generator (Now includes Context Building to prevent Timeout)
+    from app.core.database import SessionLocal
     
-    # A. System Instruction (LLM Data Toggle)
-    system_instruction = ""
-    if not message_in.use_llm_data:
-        system_instruction = "You are a stricter assistant. Answer ONLY using the provided context (Files, Documents, Web Search). Do not use your internal knowledge base. If the answer is not in the context, say 'I cannot answer this based on the provided context.'\n\n"
-    
-    # B. Web Search
-    web_context = ""
-    if message_in.use_web_search:
-        try:
-            search_query = await ollama_service.generate_search_query(message_in.model_used or "llama3", user_msg_content)
-            print(f"DEBUG: Generated Search Query: {search_query}")
-            search_results = await ollama_service.execute_web_search(search_query)
-            web_context = f"\n\n--- WEB SEARCH RESULTS ({search_query}) ---\n{search_results}\n--- END WEB SEARCH ---\n"
-            
-            # Persist Web Search Context
-            if search_results and "Error" not in search_results:
-                web_ctx_entry = models.MessageContext(
-                    message_id=user_msg.id,
-                    document_name=f"Web Search: {search_query}",
-                    content=search_results,
-                    is_active=True
-                )
-                db.add(web_ctx_entry)
-        except Exception as e:
-            print(f"Web Search Error: {e}")
-            web_context = f"\n[Web Search Failed: {str(e)}]\n"
-
-    # C. RAG (Documents)
-    rag_context = ""
-    if message_in.use_documents:
-        from app.services import ingestion
-        
-        # Get ALL attachments for this chat
-        chat_attachments = db.query(models.Attachment).filter(models.Attachment.chat_id == message_in.chat_id).all()
-        doc_ids = [str(att.id) for att in chat_attachments]
-        
-        # Retrieve chunks (Rich metadata)
-        if doc_ids:
-            chunks = ingestion.retrieve_relevant_chunks(user_msg_content, doc_ids)
-        
-        if chunks:
-            rag_context_parts = []
-            for chunk in chunks:
-                text = chunk.get("text", "")
-                doc_name = chunk.get("meta", {}).get("filename", "Unknown Document")
-                # Append to context string
-                rag_context_parts.append(f"--- DOCUMENT: {doc_name} ---\n{text}\n")
-                
-                # Persist RAG Context
-                rag_ctx_entry = models.MessageContext(
-                    message_id=user_msg.id,
-                    document_id=chunk.get("doc_id"),
-                    document_name=doc_name,
-                    content=text,
-                    is_active=True
-                )
-                db.add(rag_ctx_entry)
-            
-            rag_context = "\n\nRelevant Context from Documents:\n" + "\n".join(rag_context_parts)
-            db.commit() # Commit context entries
-
-    # D. Construct Final Prompt & Save Augmented Content
-    final_content = user_msg_content
-    context_block = f"{attached_context}{rag_context}{web_context}"
-    
-    if context_block:
-        final_content = f"{system_instruction}User uploaded files/context. Use the following context to answer.\n\nContext:\n{context_block}\n\nUser Query: {user_msg_content}"
-    elif system_instruction:
-        final_content = f"{system_instruction}\nUser Query: {user_msg_content}"
-
-    # Update User Message with Augmented Content
-    user_msg.augmented_content = final_content
-    db.commit()
-
-    # 4. History (Last 5 Messages)
-    history = db.query(models.Message).filter(
-        models.Message.chat_id == message_in.chat_id,
-        models.Message.id != user_msg.id 
-    ).order_by(models.Message.created_at.desc()).limit(5).all() # RESTRICTED TO 5
-    
-    history = history[::-1]
-    
-    ollama_messages = []
-    for msg in history:
-        # If we had augmented content for previous messages, do we use it? 
-        # Usually, cleaner to use original content for history to avoid massive context bloat.
-        # But for correctness, maybe we should. Let's stick to original content for now to save tokens.
-        ollama_messages.append({
-            "role": msg.role,
-            "content": msg.content
-        })
-    
-    ollama_messages.append({
-        "role": "user",
-        "content": final_content
-    })
-
-    # 5. Stream Generator
     async def response_generator():
-        full_response = []
+        new_db = SessionLocal()
+        final_content = user_msg_content # Default fallback
         try:
+            # --- CONTEXT PREPARATION INSIDE GENERATOR ---
+            
+            # A. System Instruction
+            system_instruction = ""
+            if not message_in.use_llm_data:
+                system_instruction = "You are a stricter assistant. Answer ONLY using the provided context (Files, Documents, Web Search). Do not use your internal knowledge base. If the answer is not in the context, say 'I cannot answer this based on the provided context.'\n\n"
+            
+            # B. Web Search
+            web_context = ""
+            if message_in.use_web_search:
+                try:
+                    search_query = await ollama_service.generate_search_query(message_in.model_used or "llama3", user_msg_content)
+                    print(f"DEBUG: Generated Search Query: {search_query}")
+                    # Yield a status update if frontend supports it, otherwise just log
+                    # yield f"data: {json.dumps({'status': 'Searching web...'})}\n\n" 
+                    
+                    search_results = await ollama_service.execute_web_search(search_query)
+                    web_context = f"\n\n--- WEB SEARCH RESULTS ({search_query}) ---\n{search_results}\n--- END WEB SEARCH ---\n"
+                    
+                    # Persist Web Search Context
+                    if search_results and "Error" not in search_results:
+                        web_ctx_entry = models.MessageContext(
+                            message_id=user_msg.id,
+                            document_name=f"Web Search: {search_query}",
+                            content=search_results,
+                            is_active=True
+                        )
+                        new_db.add(web_ctx_entry)
+                        new_db.commit()
+                except Exception as e:
+                    print(f"Web Search Error: {e}")
+                    web_context = f"\n[Web Search Failed: {str(e)}]\n"
+
+            # C. RAG (Documents)
+            rag_context = ""
+            if message_in.use_documents:
+                from app.services import ingestion
+                
+                # Get ALL attachments for this chat
+                chat_attachments = new_db.query(models.Attachment).filter(models.Attachment.chat_id == message_in.chat_id).all()
+                doc_ids = [str(att.id) for att in chat_attachments]
+                
+                if doc_ids:
+                    # Note: retrieve_relevant_chunks uses its own VectorSessionLocal, so it's fine
+                    chunks = ingestion.retrieve_relevant_chunks(user_msg_content, doc_ids)
+                else:
+                    chunks = []
+                
+                if chunks:
+                    rag_context_parts = []
+                    for chunk in chunks:
+                        text = chunk.get("text", "")
+                        doc_name = chunk.get("meta", {}).get("filename", "Unknown Document")
+                        rag_context_parts.append(f"--- DOCUMENT: {doc_name} ---\n{text}\n")
+                        
+                        # Persist RAG Context
+                        rag_ctx_entry = models.MessageContext(
+                            message_id=user_msg.id,
+                            document_id=chunk.get("doc_id"),
+                            document_name=doc_name,
+                            content=text,
+                            is_active=True
+                        )
+                        new_db.add(rag_ctx_entry)
+                    
+                    rag_context = "\n\nRelevant Context from Documents:\n" + "\n".join(rag_context_parts)
+                    new_db.commit()
+
+            # D. Construct Final Prompt & Save Augmented Content
+            final_content = user_msg_content
+            context_block = f"{attached_context}{rag_context}{web_context}"
+            
+            if context_block:
+                final_content = f"{system_instruction}User uploaded files/context. Use the following context to answer.\n\nContext:\n{context_block}\n\nUser Query: {user_msg_content}"
+            elif system_instruction:
+                final_content = f"{system_instruction}\nUser Query: {user_msg_content}"
+
+            # Update User Message with Augmented Content
+            # Re-fetch user_msg attached to this session or update by ID
+            user_msg_ref = new_db.query(models.Message).filter(models.Message.id == user_msg.id).first()
+            if user_msg_ref:
+                user_msg_ref.augmented_content = final_content
+                new_db.commit()
+
+            # 4. History (Last 5 Messages)
+            history = new_db.query(models.Message).filter(
+                models.Message.chat_id == message_in.chat_id,
+                models.Message.id != user_msg.id 
+            ).order_by(models.Message.created_at.desc()).limit(5).all()
+            
+            history = history[::-1]
+            
+            ollama_messages = []
+            for msg in history:
+                ollama_messages.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+            
+            ollama_messages.append({
+                "role": "user",
+                "content": final_content
+            })
+            
+            # 5. Stream LLM
+            full_response = []
             async for chunk in ollama_service.stream_chat(message_in.model_used or "llama3", ollama_messages):
                 full_response.append(chunk)
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-        finally:
-            yield "data: [DONE]\n\n"
-            
+                
             # Save Assistant Message
             response_text = "".join(full_response)
             if response_text:
-                from app.core.database import SessionLocal
-                new_db = SessionLocal()
-                try:
-                    asst_msg = models.Message(
-                        chat_id=message_in.chat_id,
-                        role="assistant",
-                        content=response_text,
-                        model_used=message_in.model_used
-                    )
-                    new_db.add(asst_msg)
-                    # Update chat updated_at
-                    chat_ref = new_db.query(models.Chat).filter(models.Chat.id == message_in.chat_id).first()
+                asst_msg = models.Message(
+                    chat_id=message_in.chat_id,
+                    role="assistant",
+                    content=response_text,
+                    model_used=message_in.model_used
+                )
+                new_db.add(asst_msg)
+                # Update chat updated_at
+                chat_ref = new_db.query(models.Chat).filter(models.Chat.id == message_in.chat_id).first()
+                if chat_ref:
                     chat_ref.updated_at = datetime.utcnow()
-                    
-                    new_db.commit()
-                except Exception as db_e:
-                    print(f"Error saving assistant message: {db_e}")
-                finally:
-                    new_db.close()
+                
+                new_db.commit()
+
+        except Exception as e:
+            print(f"Error in response generator: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        finally:
+            new_db.close()
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(response_generator(), media_type="text/event-stream")
 
