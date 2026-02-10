@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, Loader2, Cpu, FileText, Plus, MoreVertical } from 'lucide-react';
+import { Send, Paperclip, Loader2, Cpu, FileText, Plus, MoreVertical, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -50,6 +50,51 @@ const parseContent = (content) => {
     return { thought, response };
 };
 
+const CodeBlock = ({ node, inline, className, children, ...props }) => {
+    const [copied, setCopied] = useState(false);
+    const match = /language-(\w+)/.exec(className || '');
+
+    const handleCopy = () => {
+        const text = String(children).replace(/\n$/, '');
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    if (!inline && match) {
+        return (
+            <div className="relative group rounded-md overflow-hidden my-4 border border-border/50 bg-[#1e1e1e]">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-700/50 text-xs text-zinc-400 border-b border-white/10 select-none">
+                    <span className="font-mono opacity-70">{match[1]}</span>
+                    <button
+                        onClick={handleCopy}
+                        className="flex items-center gap-1 hover:text-white transition-colors p-1 rounded hover:bg-white/10"
+                        title="Copy code"
+                    >
+                        {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                    </button>
+                </div>
+                <SyntaxHighlighter
+                    {...props}
+                    style={vscDarkPlus}
+                    language={match[1]}
+                    PreTag="div"
+                    customStyle={{ margin: 0, padding: '1rem', background: 'transparent' }}
+                >
+                    {String(children).replace(/\n$/, '')}
+                </SyntaxHighlighter>
+            </div>
+        );
+    }
+
+    return (
+        <code {...props} className={className}>
+            {children}
+        </code>
+    );
+};
+
+
 export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggleRightSidebar, overwriteMode }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
@@ -64,7 +109,11 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
     const prevMessagesLength = useRef(0);
 
     const [viewPrompt, setViewPrompt] = useState(null);
+    const [title, setTitle] = useState(chat?.title || "New Chat");
 
+    useEffect(() => {
+        setTitle(chat?.title || "New Chat");
+    }, [chat?.id, chat?.title]);
 
     useEffect(() => {
         if (selectedModel) {
@@ -370,9 +419,39 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                     {/* ... (existing Title and Tags) ... */}
                     <input
                         type="text"
-                        value={chat.title}
-                        onChange={(e) => onChatUpdate({ ...chat, title: e.target.value })}
-                        onBlur={() => updateChat(chat.id, { title: chat.title })}
+                        value={title}
+                        maxLength={255}
+                        onChange={(e) => setTitle(e.target.value)}
+                        onBlur={async () => {
+                            // Filter non-printable characters (ASCII 0-31, 127) and newlines
+                            let sanitized = title.replace(/[\x00-\x1F\x7F]/g, "");
+                            let newTitle = sanitized.trim();
+
+                            // Truncate if exceeds database limit (255)
+                            if (newTitle.length > 255) {
+                                newTitle = newTitle.substring(0, 255);
+                            }
+
+                            if (!newTitle) {
+                                setTitle(chat.title); // Restore original if empty
+                                return;
+                            }
+
+                            // Update local state to sanitized version
+                            if (newTitle !== title) {
+                                setTitle(newTitle);
+                            }
+
+                            if (newTitle !== chat.title) {
+                                try {
+                                    await updateChat(chat.id, { title: newTitle });
+                                    onChatUpdate();
+                                } catch (error) {
+                                    console.error("Failed to update chat title", error);
+                                    setTitle(chat.title); // Revert on error
+                                }
+                            }
+                        }}
                         className="font-semibold text-lg bg-transparent border-none outline-none focus:ring-1 focus:ring-primary/50 rounded px-1 -ml-1 w-full max-w-md truncate"
                     />
                     {/* Tags UI (simplified for brevity in replacement, assuming strictly kept or mostly untouched if targeting correctly) */}
@@ -446,23 +525,7 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                                                 remarkPlugins={[remarkGfm]}
                                                 rehypePlugins={[rehypeRaw]}
                                                 components={{
-                                                    code({ node, inline, className, children, ...props }) {
-                                                        const match = /language-(\w+)/.exec(className || '')
-                                                        return !inline && match ? (
-                                                            <SyntaxHighlighter
-                                                                {...props}
-                                                                style={vscDarkPlus}
-                                                                language={match[1]}
-                                                                PreTag="div"
-                                                            >
-                                                                {String(children).replace(/\n$/, '')}
-                                                            </SyntaxHighlighter>
-                                                        ) : (
-                                                            <code {...props} className={className}>
-                                                                {children}
-                                                            </code>
-                                                        )
-                                                    }
+                                                    code: CodeBlock
                                                 }}
                                             >
                                                 {response}

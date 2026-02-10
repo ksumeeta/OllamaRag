@@ -44,8 +44,23 @@ def delete_chat(chat_id: int, db: Session = Depends(get_db)):
     chat = db.query(models.Chat).filter(models.Chat.id == chat_id).first()
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
+    
+    # Get attachment IDs before deleting the chat (for vector DB cleanup)
+    attachment_ids = [str(att.id) for att in chat.attachments]
+    
+    # Delete from MSSQL (Cascades to Attachments, Messages, Contexts)
     db.delete(chat)
     db.commit()
+    
+    # Delete from Vector DB (PostgreSQL)
+    if attachment_ids:
+        from app.services import ingestion
+        for doc_id in attachment_ids:
+            try:
+                ingestion.delete_document_chunks(doc_id)
+            except Exception as e:
+                print(f"Error deleting chunks for doc_id {doc_id}: {e}")
+
     return {"ok": True}
 
 @router.patch("/{chat_id}", response_model=schemas.Chat)

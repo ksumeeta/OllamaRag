@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import RightSidebar from './components/RightSidebar'; // Import
-import { getChats, createChat } from './services/api';
+import { getChats, createChat, deleteChat } from './services/api';
 
 function App() {
   const [chats, setChats] = useState([]);
@@ -70,6 +70,20 @@ function App() {
     }
   };
 
+  const handleDeleteChat = async (chatId) => {
+    if (window.confirm("Are you sure you want to delete this chat? This action cannot be undone.")) {
+      try {
+        await deleteChat(chatId);
+        if (activeChat?.id === chatId) {
+          setActiveChat(null);
+        }
+        fetchChats();
+      } catch (error) {
+        console.error("Failed to delete chat", error);
+      }
+    }
+  };
+
   const handleSelectChat = (chat) => {
     setActiveChat(chat);
   };
@@ -87,6 +101,7 @@ function App() {
           chats={chats}
           activeChat={activeChat}
           onNewChat={handleNewChat}
+          onDeleteChat={handleDeleteChat}
           onSelectChat={handleSelectChat}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
           backendOnline={backendOnline}
