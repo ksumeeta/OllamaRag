@@ -93,7 +93,7 @@ async def stream_chat(model: str, messages: List[Dict], enable_think: bool = Tru
     
     in_thinking = False
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=90.0) as client:
         async with client.stream('POST', url, json=payload) as response:
             async for line in response.aiter_lines():
                 if line:

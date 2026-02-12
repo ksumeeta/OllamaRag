@@ -5,7 +5,6 @@ from docling.chunking import HybridChunker
 from docling_core.types.io import DocumentStream
 from io import BytesIO
 import pathlib
-# from docling.datamodel.base_models import InputFormat
 
 from sqlalchemy.orm import Session
 from app.core.database import VectorSessionLocal
@@ -39,7 +38,13 @@ converter = DocumentConverter(
         "pdf": PdfFormatOption(pipeline_options=pdfpipeline_options)
     }
 )
-# converter = DocumentConverter()
+
+# import tiktoken
+# from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
+# tokenizer = OpenAITokenizer(
+#     tokenizer=tiktoken.encoding_for_model("gpt-4o"),
+#     max_tokens=128 * 1024,  # context window length required for OpenAI tokenizers
+# )
 
 import os
 # ... (existing imports)
@@ -120,7 +125,7 @@ def process_and_index_document(file_path: str, doc_id: str):
     # 2. Chunking (Hybrid)
     chunker = HybridChunker(
         tokenizer="sentence-transformers/all-MiniLM-L6-v2", # Default, or align with nomic if possible
-        # merge_peers=True
+        merge_peers=True
     )
     chunks_iter = chunker.chunk(doc)
     chunks = list(chunks_iter)
