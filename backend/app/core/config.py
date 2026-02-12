@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     
     # Ollama Settings
     OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_BASE_URL_LOCAL: str = "http://localhost:11434"
     OLLAMA_WEB_SEARCH_KEY: str = ""
 
     # Uploads

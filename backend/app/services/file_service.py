@@ -1,10 +1,11 @@
 import os
+from app.services.ingestion import extract_text_content
 from fastapi import UploadFile
 from typing import Tuple
 from app.core.config import settings
 import shutil
 from datetime import datetime
-from docling.document_converter import DocumentConverter
+
 
 
 UPLOAD_DIR = settings.UPLOAD_DIR
@@ -32,27 +33,15 @@ async def save_upload_file(upload_file: UploadFile) -> Tuple[str, int]:
         upload_file.file.close()
 
 
-converter = DocumentConverter()
+
 
 def extract_text_from_file(file_path: str, file_type: str) -> str:
     """
-    Extracts text using Docling for better structural preservation.
+    Extracts text using centralized ingestion logic (Docling + Fallback).
+    Delegates to app.services.ingestion.extract_text_content.
     """
     try:
-        ext = os.path.splitext(file_path)[1].lower()
-        
-        # Supported By Docling (PDF, DOCX, images, etc.)
-        if ext in [".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg", ".html", ".pptx", ".md"]:
-             print(f"DEBUG: Converting {file_path} with Docling...")
-             result = converter.convert(file_path)
-             document = result.document
-             return document.export_to_markdown() # Using markdown export as it's cleaner for LLMs
-            
-        elif ext in [".txt", ".json", ".csv", ".py", ".js", ".css", ".sql"]:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                return f.read()
-                
-        return ""
+        return extract_text_content(file_path)
     except Exception as e:
         print(f"Extraction error: {e}")
         return ""

@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.api.routers import chats, models, tags, upload
 from app.core.database import engine, Base, vector_engine
 from app.models.vector_models import BaseVector
 from app.core.config import settings
+from app.services.ollama_service import check_ollama_connection
 
 # Create Tables (MS SQL)
 Base.metadata.create_all(bind=engine)
@@ -20,9 +22,16 @@ if vector_engine:
     
     BaseVector.metadata.create_all(bind=vector_engine)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Check Ollama Connection on Startup
+    await check_ollama_connection()
+    yield
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 
 # CORS

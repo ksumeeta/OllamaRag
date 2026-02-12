@@ -107,9 +107,27 @@
 }
 
 @layer utilities {
+  .prose table {
+    border-collapse: separate !important;
+    border-spacing: 0 1.25rem !important;
+    width: 100%;
+  }
+
   .prose table td,
   .prose table th {
     padding-left: 1rem !important;
     padding-right: 1rem !important;
+    vertical-align: top !important;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.5rem !important;
+  }
+
+  .prose table th {
+    border-bottom-width: 2px !important;
+  }
+
+  .prose table tbody tr:hover td {
+    background-color: var(--color-muted);
+    transition: background-color 0.2s;
   }
 }

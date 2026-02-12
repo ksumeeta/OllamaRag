@@ -5,6 +5,25 @@ from app.core.config import settings
 
 OLLAMA_URL = settings.OLLAMA_BASE_URL
 
+async def check_ollama_connection():
+    global OLLAMA_URL
+    primary_url = settings.OLLAMA_BASE_URL
+    local_url = settings.OLLAMA_BASE_URL_LOCAL
+    
+    print(f"Checking primary Ollama connection at: {primary_url}...")
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            response = await client.get(f"{primary_url}/api/tags")
+            if response.status_code == 200:
+                OLLAMA_URL = primary_url
+                print(f"✅ Primary Ollama ({primary_url}) is ONLINE. Using primary.")
+                return
+    except Exception as e:
+        print(f"⚠️ Primary Ollama unavailable ({str(e)}).")
+
+    print(f"🔄 Switching to Local Ollama at: {local_url}...")
+    OLLAMA_URL = local_url
+
 async def list_local_models() -> List[Dict]:
     """
     Fetch list of available models from Ollama.

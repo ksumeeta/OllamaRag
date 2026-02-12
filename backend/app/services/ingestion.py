@@ -2,6 +2,9 @@ from docling.document_converter import (DocumentConverter, PdfFormatOption, Word
 from docling.datamodel.pipeline_options import (PdfPipelineOptions, TableFormerMode, 
                                                 AcceleratorOptions, AcceleratorDevice,TesseractCliOcrOptions)
 from docling.chunking import HybridChunker
+from docling_core.types.io import DocumentStream
+from io import BytesIO
+import pathlib
 # from docling.datamodel.base_models import InputFormat
 
 from sqlalchemy.orm import Session
@@ -47,20 +50,67 @@ def get_embedding(text: str) -> list[float]:
     response = ollama.embeddings(model="nomic-embed-text", prompt=text)
     return response["embedding"]
 
+
+def get_docling_document(file_path: str):
+    """
+    Centralized function to get a Docling Document from a file path.
+    Handles supported file types via Docling and falls back to plain text read -> DocumentStream for others.
+    """
+    path_obj = pathlib.Path(file_path)
+    ext = path_obj.suffix.lower()
+    
+    # Supported by Docling natively (PDF, DOCX, images, etc.)
+    DOCLING_EXTENSIONS = {
+        ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".xlsx", ".xls", 
+        ".html", ".htm", 
+        ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".md"
+    }
+
+    try:
+        if ext in DOCLING_EXTENSIONS:
+            logger.info(f"Using Docling converter for {file_path}")
+            conv_res = converter.convert(path_obj)
+        else:
+            # Fallback for plain text files (code, logs, txt, csv, json, etc.)
+            logger.info(f"Reading as plain text for {file_path}")
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    text_content = f.read()
+                
+                # Treat as Markdown (.md) to preserve structure/content in a generic way
+                # We use a fake filename with .md extension so Docling invokes the MD parser
+                fake_filename = path_obj.stem + ".md"
+                ds = DocumentStream(name=fake_filename, stream=BytesIO(text_content.encode("utf-8")))
+                
+                conv_res = converter.convert(ds)
+            except Exception as read_err:
+                 logger.error(f"Failed to read file as text: {read_err}")
+                 raise read_err
+
+        return conv_res.document
+    except Exception as e:
+        logger.error(f"Docling conversion failed for {file_path}: {e}")
+        raise e
+
+def extract_text_content(file_path: str) -> str:
+    """
+    Extracts text content from a file using the centralized Docling logic.
+    Returns markdown-formatted text.
+    """
+    try:
+        doc = get_docling_document(file_path)
+        return doc.export_to_markdown()
+    except Exception as e:
+        logger.error(f"Failed to extract text from {file_path}: {e}")
+        return ""
+
 def process_and_index_document(file_path: str, doc_id: str):
     logger.info(f"Processing file: {file_path}")
     
     # 1. Convert Document (Docling)
     try:
-        if file_path.lower().endswith(".txt"):
-            logger.info("Detected .txt file. Using convert_string with InputFormat.MD.")
-            with open(file_path, "r", encoding="utf-8") as f:
-                text_content = f.read()
-            conv_res = converter.convert_string(text_content, format=InputFormat.MD)
-        else:
-            conv_res = converter.convert(file_path)
-            
-        doc = conv_res.document
+        doc = get_docling_document(file_path)
+        
         # logger.info(f"Document converted. Pages: {len(doc.pages)}")
         logger.info(f"Document converted. Pages: {len(doc.pages)}\n-------------\n{doc.export_to_markdown()}\n-------------\n")
     except Exception as e:
