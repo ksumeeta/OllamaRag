@@ -5,6 +5,9 @@ from typing import Tuple
 from app.core.config import settings
 import shutil
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -43,5 +46,5 @@ def extract_text_from_file(file_path: str, file_type: str) -> str:
     try:
         return extract_text_content(file_path)
     except Exception as e:
-        print(f"Extraction error: {e}")
+        logger.error(f"Extraction error: {e}")
         return ""

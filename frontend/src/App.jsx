@@ -5,6 +5,10 @@ import ChatInterface from './components/ChatInterface';
 import RightSidebar from './components/RightSidebar'; // Import
 import { getChats, createChat, deleteChat } from './services/api';
 
+/**
+ * Main Application Component.
+ * Manages chat state, sidebar visibility, and backend connection status.
+ */
 function App() {
   const [chats, setChats] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
@@ -56,7 +60,7 @@ function App() {
       const data = await getChats({ limit: 50 });
       setChats(data);
     } catch (error) {
-      console.error("Failed to load chats", error);
+      // Silently fail or use a UI notification
     }
   };
 
@@ -66,7 +70,7 @@ function App() {
       setChats([newChat, ...chats]);
       setActiveChat(newChat);
     } catch (error) {
-      console.error("Failed to create chat", error);
+      // handle error
     }
   };
 
@@ -79,7 +83,7 @@ function App() {
         }
         fetchChats();
       } catch (error) {
-        console.error("Failed to delete chat", error);
+        // handle error
       }
     }
   };

@@ -12,6 +12,10 @@ from app.models import sql_models as models
 from app import schemas
 from app.services import ollama_service
 from app.utils_log import log_debug
+import logging
+
+# Configure Logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -21,6 +25,9 @@ def read_chats(
     limit: int = 100, 
     db: Session = Depends(get_db)
 ):
+    """
+    Retrieve a list of chats with pagination.
+    """
     chats = db.query(models.Chat).order_by(models.Chat.updated_at.desc()).offset(skip).limit(limit).all()
     return chats
 
@@ -59,7 +66,7 @@ def delete_chat(chat_id: int, db: Session = Depends(get_db)):
             try:
                 ingestion.delete_document_chunks(doc_id)
             except Exception as e:
-                print(f"Error deleting chunks for doc_id {doc_id}: {e}")
+                logger.error(f"Error deleting chunks for doc_id {doc_id}: {e}")
 
     return {"ok": True}
 
@@ -105,7 +112,10 @@ async def send_message(
     message_in: schemas.MessageCreate,
     db: Session = Depends(get_db)
 ):
-    print(f"DEBUG: Received message request: {message_in}")
+    """
+    Send a message to a chat. Handles context retrieval (RAG/Web) and streams the LLM response.
+    """
+    logger.debug(f"Received message request: {message_in}")
     # 1. Fetch Chat
     chat = db.query(models.Chat).filter(models.Chat.id == message_in.chat_id).first()
     if not chat:
@@ -116,7 +126,7 @@ async def send_message(
     
     # NEW: Handle empty content with attachments (Implicit "Summarize/Analyze this")
     if not user_msg_content.strip() and message_in.attachments:
-        user_msg_content = "Please analyze the attached document(s)."
+        user_msg_content = "Please analyze and summarise the attached document(s)."
     
     # Handle Attachments (Metadata/Text extraction context)
     attached_context = ""
@@ -160,14 +170,16 @@ async def send_message(
             system_instruction = ""
             if not message_in.use_llm_data:
                 system_instruction = "You are a stricter assistant. Answer ONLY using the provided context (Files, Documents, Web Search). Do not use your internal knowledge base. If the answer is not in the context, say 'I cannot answer this based on the provided context.'\n\n"
+            else:
+                system_instruction = "You are a helpfull assistant. Answer using the provided context if any (Files, Documents, Web Search).'\n\n"
             
             # B. Web Search
             web_context = ""
             if message_in.use_web_search:
                 try:
-                    # print(f"DEBUG: Started Search Query generation")
+                    # logger.debug(f"Started Search Query generation")
                     search_query = await ollama_service.generate_search_query(message_in.model_used or "llama3", user_msg_content)
-                    print(f"DEBUG: Generated Search Query: {search_query}")
+                    logger.info(f"Generated Search Query: {search_query}")
                     # Yield a status update if frontend supports it, otherwise just log
                     # yield f"data: {json.dumps({'status': 'Searching web...'})}\n\n" 
                     
@@ -190,7 +202,7 @@ async def send_message(
                         new_db.add(web_ctx_entry)
                         new_db.commit()
                 except Exception as e:
-                    print(f"Web Search Error: {e}")
+                    logger.error(f"Web Search Error: {e}")
                     web_context = f"\n[Web Search Failed: {str(e)}]\n"
 
             # C. RAG (Documents)
@@ -242,7 +254,7 @@ async def send_message(
             if context_block:
                 final_content = f"{system_instruction}User uploaded files/context. Use the following context to answer.\n\nContext:\n{context_block}\n\nUser Query: {user_msg_content}"
             elif system_instruction:
-                final_content = f"{system_instruction}\nUser Query: {user_msg_content}"
+                final_content = f"{system_instruction}\nUser Query: {user_msg_content}"            
 
             # Update User Message with Augmented Content
             # Re-fetch user_msg attached to this session or update by ID
@@ -251,13 +263,12 @@ async def send_message(
                 user_msg_ref.augmented_content = final_content
                 new_db.commit()
 
-            # 4. History (Last 5 Messages)
+            # 4. History (Last Messages)
             history = new_db.query(models.Message).filter(
                 models.Message.chat_id == message_in.chat_id,
                 models.Message.id != user_msg.id 
             ).order_by(models.Message.created_at.desc()).limit(1).all()
             
-            # history = history[::-1]
             ollama_messages = []
             for msg in history:
                 ollama_messages.append({
@@ -298,7 +309,7 @@ async def send_message(
             raise # Propagate GeneratorExit
             
         except Exception as e:
-            print(f"Error in response generator: {e}")
+            logger.error(f"Error in response generator: {e}")
             if not completion_suffix:
                  completion_suffix = f"\n\n🛑 Stopped due to Error: {str(e)}"
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -332,7 +343,7 @@ async def send_message(
                     
                     new_db.commit()
                 except Exception as save_err:
-                    print(f"Error saving message: {save_err}")
+                    logger.error(f"Error saving message: {save_err}")
 
             new_db.close()
             yield "data: [DONE]\n\n"

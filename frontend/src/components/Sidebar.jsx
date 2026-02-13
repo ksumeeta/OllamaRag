@@ -1,6 +1,20 @@
 import { Plus, MessageSquare, Search, Menu, X, Tag, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+/**
+ * Sidebar Component.
+ * Displays list of chats and new chat button.
+ * 
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Sidebar visibility
+ * @param {Array} props.chats - List of chats
+ * @param {Object} props.activeChat - Currently selected chat
+ * @param {Function} props.onNewChat - Handler for new chat
+ * @param {Function} props.onSelectChat - Handler for selecting chat
+ * @param {Function} props.onDeleteChat - Handler for deleting chat
+ * @param {Function} props.onToggle - Handler for toggling sidebar on mobile
+ * @param {boolean} props.backendOnline - Backend status indicator
+ */
 export default function Sidebar({ isOpen, chats, activeChat, onNewChat, onSelectChat, onDeleteChat, onToggle, backendOnline }) {
     return (
         <div

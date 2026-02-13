@@ -6,11 +6,20 @@ const api = axios.create({
     baseURL: API_URL,
 });
 
+/**
+ * Fetch available LLM models.
+ * @returns {Promise<Array>} List of models
+ */
 export const getModels = async () => {
     const response = await api.get('/models');
     return response.data;
 };
 
+/**
+ * Fetch chats with pagination.
+ * @param {Object} params - { skip, limit }
+ * @returns {Promise<Array>} List of chats
+ */
 export const getChats = async (params) => {
     const response = await api.get('/chats', { params });
     return response.data;
@@ -36,6 +45,12 @@ export const updateChat = async (id, data) => {
     return response.data;
 };
 
+/**
+ * Upload a file.
+ * @param {File} file - File object
+ * @param {boolean} overwrite - Whether to overwrite existing file
+ * @returns {Promise<Object>} Uploaded attachment data
+ */
 export const uploadFile = async (file, overwrite = false) => {
     const formData = new FormData();
     formData.append('file', file);

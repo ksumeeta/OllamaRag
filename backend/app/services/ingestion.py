@@ -15,7 +15,7 @@ import json
 import logging
 
 # Configure Logging
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO) # Removed to allow main.py to configure logging
 logger = logging.getLogger(__name__)
 
 #-----------------GPU CKECK-------------------------
@@ -39,12 +39,6 @@ converter = DocumentConverter(
     }
 )
 
-# import tiktoken
-# from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
-# tokenizer = OpenAITokenizer(
-#     tokenizer=tiktoken.encoding_for_model("gpt-4o"),
-#     max_tokens=128 * 1024,  # context window length required for OpenAI tokenizers
-# )
 
 import os
 # ... (existing imports)
@@ -109,6 +103,9 @@ def extract_text_content(file_path: str) -> str:
         return ""
 
 def process_and_index_document(file_path: str, doc_id: str):
+    """
+    Process a document from file_path, converting it, chunking it, and indexing it into the Vector DB.
+    """
     logger.info(f"Processing file: {file_path}")
     
     # 1. Convert Document (Docling)
@@ -116,7 +113,7 @@ def process_and_index_document(file_path: str, doc_id: str):
         doc = get_docling_document(file_path)
         
         logger.info(f"Document converted. Pages: {len(doc.pages)}")
-        # logger.info(f"Document converted. Pages: {len(doc.pages)}\n-------------\n{doc.export_to_markdown()}\n-------------\n")
+        logger.info(f"Document converted. Pages: {len(doc.pages)}")
     except Exception as e:
         logger.error(f"Docling conversion failed: {e}")
         raise e
@@ -124,7 +121,6 @@ def process_and_index_document(file_path: str, doc_id: str):
     # 2. Chunking (Hybrid)
     chunker = HybridChunker(
         tokenizer="nomic-ai/nomic-embed-text-v1.5", 
-        # merge_peers=True,
         max_tokens=350 # Approx 1500-1600 characters
     )
     chunks_iter = chunker.chunk(doc)
@@ -140,9 +136,7 @@ def process_and_index_document(file_path: str, doc_id: str):
     try:
         for i, chunk in enumerate(chunks):
             logger.info(f"\n--------------Processing chunk {i+1}/{len(chunks)}")
-            # logger.info(f"\nProcessing chunk {i+1}/{len(chunks)} chunk.text:\n-------------\n{chunk.text}\n--------------------\n")    
             text_content = chunk.text
-            # text_content = chunker.contextualize(chunk=chunk)
             meta = chunk.meta.export_json_dict()
             
             # Embed
@@ -170,6 +164,9 @@ def process_and_index_document(file_path: str, doc_id: str):
     return doc.export_to_markdown() # Return full text/markdown for MS SQL if needed
 
 def retrieve_relevant_chunks(query: str, doc_ids: list[str], top_k: int = 5) -> list[dict]:
+    """
+    Retrieve relevant chunks from the Vector DB for a given query and set of document IDs.
+    """
     if not VectorSessionLocal or not doc_ids:
         return []
 

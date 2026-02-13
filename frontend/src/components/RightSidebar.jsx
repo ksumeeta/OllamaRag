@@ -2,6 +2,19 @@ import React, { useState } from 'react';
 import { X, Search, FileText, Globe, Database, Cpu, ChevronRight, ChevronDown, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
+/**
+ * Right Sidebar Component.
+ * Manages context flags (RAG/Web/LLM), overwrite mode, and context exploration.
+ * 
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Sidebar visibility
+ * @param {Object} props.contextFlags - Context flags state
+ * @param {Function} props.setContextFlags - Context flags setter
+ * @param {string} props.chatId - Current chat ID
+ * @param {Array} props.attachments - List of attachments in current chat
+ * @param {boolean} props.overwriteMode - Overwrite mode state
+ * @param {Function} props.setOverwriteMode - Overwrite mode setter
+ */
 const RightSidebar = ({
     isOpen,
     // onClose, // Removed as it is permanent

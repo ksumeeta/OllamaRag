@@ -95,6 +95,17 @@ const CodeBlock = ({ node, inline, className, children, ...props }) => {
 };
 
 
+/**
+ * Chat Interface Component.
+ * Handles message display, input, file attachments, and streaming responses (including thinking process).
+ * 
+ * @param {Object} props
+ * @param {Object} props.chat - Current chat object
+ * @param {Function} props.onChatUpdate - Callback when chat is updated
+ * @param {Object} props.contextFlags - Flags for RAG/Web search
+ * @param {Function} props.toggleRightSidebar - Toggle right sidebar
+ * @param {boolean} props.overwriteMode - Whether to overwrite existing files on upload
+ */
 export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggleRightSidebar, overwriteMode }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
@@ -150,7 +161,7 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
             setMessages(data.messages || []);
             setAttachments([]); // Reset attachments for new message
         } catch (error) {
-            console.error("Error loading chat", error);
+            // handle error mostly UI feedback needed or silent
         }
     };
 
@@ -168,7 +179,6 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                 }
             }
         } catch (error) {
-            console.error("Error loading models", error);
             // Fallback
             setModels([{ name: "llama3" }, { name: "mistral" }]);
         }
@@ -254,7 +264,6 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                 });
             }
         } catch (error) {
-            console.error("Error uploading files", error);
             setIsLoading(false);
             setAbortController(null);
             setMessages(prev => {
@@ -378,7 +387,7 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                         // Expected termination. Throwing prevents fetch-event-source from retrying.
                         throw err;
                     }
-                    console.error("Stream error", err);
+
                     // Always throw to prevent retry
                     if (err.message.includes("Failed to send")) {
                         setIsLoading(false);
@@ -389,7 +398,6 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
             });
         } catch (error) {
             if (error.name !== 'AbortError' && error.message !== 'STREAM_CLOSED_BY_SERVER') {
-                console.error("Error sending message", error);
                 setIsLoading(false);
                 setAbortController(null);
                 setMessages(prev => {
@@ -459,7 +467,6 @@ export default function ChatInterface({ chat, onChatUpdate, contextFlags, toggle
                                     await updateChat(chat.id, { title: newTitle });
                                     onChatUpdate();
                                 } catch (error) {
-                                    console.error("Failed to update chat title", error);
                                     setTitle(chat.title); // Revert on error
                                 }
                             }

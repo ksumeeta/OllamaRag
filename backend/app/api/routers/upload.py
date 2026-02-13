@@ -6,6 +6,11 @@ from app import schemas
 from app.services import file_service
 from datetime import datetime
 
+import logging
+
+# Configure Logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 @router.post("/", response_model=schemas.Attachment)
@@ -14,6 +19,9 @@ async def upload_file(
     overwrite: bool = Form(False), # Using Form to receive boolean
     db: Session = Depends(get_db)
 ):
+    """
+    Handle file upload, logic for overwriting existing files, and triggering ingestion.
+    """
     import os
     try:
         # Check for existing file
@@ -27,7 +35,7 @@ async def upload_file(
                 )
             
             # --- OVERWRITE LOGIC ---
-            print(f"DEBUG: Overwriting file {file.filename} (ID: {existing_attachment.id})")
+            logger.info(f"Overwriting file {file.filename} (ID: {existing_attachment.id})")
             
             # 1. Delete from Vector DB
             from app.services import ingestion
@@ -38,9 +46,9 @@ async def upload_file(
             if existing_attachment.file_path and os.path.exists(existing_attachment.file_path):
                 try:
                     os.remove(existing_attachment.file_path)
-                    print(f"DEBUG: Deleted old file: {existing_attachment.file_path}")
+                    logger.info(f"Deleted old file: {existing_attachment.file_path}")
                 except Exception as e:
-                    print(f"Warning: Could not delete old file: {e}")
+                    logger.warning(f"Could not delete old file: {e}")
             
             # 3. Save New File (Disk)
             # This creates a new file, potentially in a new date-folder
@@ -94,9 +102,5 @@ async def upload_file(
     except HTTPException as he:
         raise he
     except Exception as e:
-        import traceback
-        with open("backend_error.log", "a") as f:
-            f.write(f"Error processing upload: {str(e)}\n")
-            f.write(traceback.format_exc())
-            f.write("\n" + "-"*50 + "\n")
+        logger.error(f"Error processing upload: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

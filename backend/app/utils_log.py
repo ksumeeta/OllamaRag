@@ -1,3 +1,6 @@
+"""
+Utility module for logging debug information to a file.
+"""
 import os
 from datetime import datetime
 
