@@ -165,7 +165,7 @@ async def send_message(
             web_context = ""
             if message_in.use_web_search:
                 try:
-                    print(f"DEBUG: Started Search Query: {search_query}")
+                    # print(f"DEBUG: Started Search Query generation")
                     search_query = await ollama_service.generate_search_query(message_in.model_used or "llama3", user_msg_content)
                     print(f"DEBUG: Generated Search Query: {search_query}")
                     # Yield a status update if frontend supports it, otherwise just log
@@ -176,9 +176,14 @@ async def send_message(
                     
                     # Persist Web Search Context
                     if search_results and "Error" not in search_results:
+                        # Truncate to avoid SQL error (255 char limit)
+                        doc_name = f"Web Search: {search_query}"
+                        if len(doc_name) > 250:
+                            doc_name = doc_name[:247] + "..."
+                            
                         web_ctx_entry = models.MessageContext(
                             message_id=user_msg.id,
-                            document_name=f"Web Search: {search_query}",
+                            document_name=doc_name,
                             content=search_results,
                             is_active=True
                         )
@@ -268,41 +273,67 @@ async def send_message(
             # 5. Stream LLM
             full_content = []
             full_thinking = []
+            completion_suffix = ""
             
-            async for chunk_data in ollama_service.stream_chat(message_in.model_used or "llama3", ollama_messages):
-                # chunk_data is {"type": "think"|"content", "content": "..."}
-                if chunk_data["type"] == "think":
-                    full_thinking.append(chunk_data["content"])
-                    yield f"data: {json.dumps({'type': 'think', 'chunk': chunk_data['content']})}\n\n"
-                else:
-                    full_content.append(chunk_data["content"])
-                    # detailed type for frontend, fallback compatible if they just check 'chunk'
-                    yield f"data: {json.dumps({'type': 'content', 'chunk': chunk_data['content']})}\n\n"
+            try:
+                async for chunk_data in ollama_service.stream_chat(message_in.model_used or "llama3", ollama_messages):
+                    # chunk_data is {"type": "think"|"content", "content": "..."}
+                    if chunk_data["type"] == "think":
+                        full_thinking.append(chunk_data["content"])
+                        yield f"data: {json.dumps({'type': 'think', 'chunk': chunk_data['content']})}\n\n"
+                    else:
+                        full_content.append(chunk_data["content"])
+                        # detailed type for frontend, fallback compatible if they just check 'chunk'
+                        yield f"data: {json.dumps({'type': 'content', 'chunk': chunk_data['content']})}\n\n"
                 
-            # Save Assistant Message
+                completion_suffix = "\n\n✅ Finished"
+
+            except Exception as e:
+                completion_suffix = f"\n\n🛑 Stopped due to Error: {str(e)}"
+                raise e # Re-raise to be caught by outer handler for logging/yielding error
+                
+        except GeneratorExit:
+            # Handle client disconnect (Stop generation)
+            completion_suffix = "\n\n🛑 Stopped by User"
+            raise # Propagate GeneratorExit
+            
+        except Exception as e:
+            print(f"Error in response generator: {e}")
+            if not completion_suffix:
+                 completion_suffix = f"\n\n🛑 Stopped due to Error: {str(e)}"
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            
+        finally:
+            # Save Assistant Message (Guaranteed execution)
             response_text = "".join(full_content)
             thinking_text = "".join(full_thinking) if full_thinking else None
             
-            if response_text or thinking_text:
-                asst_msg = models.Message(
-                    chat_id=message_in.chat_id,
-                    role="assistant",
-                    content=response_text,
-                    thinking_process=thinking_text,
-                    model_used=message_in.model_used
-                )
-                new_db.add(asst_msg)
-                # Update chat updated_at
-                chat_ref = new_db.query(models.Chat).filter(models.Chat.id == message_in.chat_id).first()
-                if chat_ref:
-                    chat_ref.updated_at = datetime.utcnow()
-                
-                new_db.commit()
+            # If suffix wasn't set (e.g. strict GeneratorExit without inner catch or other break), assume user stop
+            if not completion_suffix and (response_text or thinking_text):
+                 completion_suffix = "\n\n🛑 Stopped by User"
 
-        except Exception as e:
-            print(f"Error in response generator: {e}")
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-        finally:
+            if response_text or thinking_text:
+                # Append suffix to content
+                response_text += completion_suffix
+                
+                try:
+                    asst_msg = models.Message(
+                        chat_id=message_in.chat_id,
+                        role="assistant",
+                        content=response_text,
+                        thinking_process=thinking_text,
+                        model_used=message_in.model_used
+                    )
+                    new_db.add(asst_msg)
+                    # Update chat updated_at
+                    chat_ref = new_db.query(models.Chat).filter(models.Chat.id == message_in.chat_id).first()
+                    if chat_ref:
+                        chat_ref.updated_at = datetime.utcnow()
+                    
+                    new_db.commit()
+                except Exception as save_err:
+                    print(f"Error saving message: {save_err}")
+
             new_db.close()
             yield "data: [DONE]\n\n"
 
