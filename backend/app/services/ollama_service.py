@@ -81,38 +81,107 @@ async def chat_stream_generator(
             yield f"Error calling Ollama: {str(e)}"
 
 # Reworking generator for robustness using line iteration
-async def stream_chat(model: str, messages: List[Dict], enable_think: bool = True) -> AsyncGenerator[Dict[str, str], None]:
+async def stream_chat(model: str, messages: List[Dict], enable_think: bool = False) -> AsyncGenerator[Dict[str, str], None]:
     url = f"{OLLAMA_URL}/api/chat"
+    
+    # 1. Prepare initial payload
     payload = {
         "model": model,
         "messages": messages,
         "stream": True
     }
-    if enable_think:
-        payload["think"] = True 
+    # If user explicitly requested thinking, or if we default to trying it (e.g. for reasoning models)
+    # The previous fix set enable_think=False by default to be safe.
+    # But if the user WANTS to support reasoning models automatically, we should defaults to True *but fallback*.
+    # However, strict instructions were to "find if the model supports think". Use fallback for that.
     
-    in_thinking = False
+    # Let's trust the 'enable_think' arg passed by caller (which is True in chats.py by default unless changed).
+    # Wait, earlier I changed the default in chats.py? No, I changed the default in `stream_chat` signature.
+    # But `chats.py` calls it with `message_in.model_used` but doesn't pass `enable_think`. 
+    # `chats.py` doesn't pass enable_think, so it uses the default.
+    # If I want to support "auto-detect", I should default `enable_think=True` (or make it a tri-state), 
+    # and then fallback.
+    
+    use_thinking = enable_think
+    if enable_think:
+         payload["think"] = True
 
-    async with httpx.AsyncClient(timeout=90.0) as client:
-        async with client.stream('POST', url, json=payload) as response:
-            async for line in response.aiter_lines():
-                if line:
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        should_retry_without_think = False
+        
+        # Attempt 1
+        try:
+            async with client.stream('POST', url, json=payload) as response:
+                if response.status_code == 400:
+                    # check error
+                    content = await response.aread()
                     try:
-                        data = json.loads(line)
-                        if 'message' in data:
-                            msg = data['message']
-                            val_thinking = msg.get('thinking', '')
-                            val_content = msg.get('content', '')
-                            
-                            if val_thinking:
-                                yield {"type": "think", "content": val_thinking}
-                            elif val_content:
-                                yield {"type": "content", "content": val_content}
+                        err_json = json.loads(content)
+                        err_msg = err_json.get("error", "")
+                    except:
+                        err_msg = content.decode('utf-8')
+                        
+                    if "does not support thinking" in err_msg:
+                        print(f"Model '{model}' does not support thinking. Retrying without 'think' param.")
+                        should_retry_without_think = True
+                    else:
+                        raise Exception(f"Ollama Error ({response.status_code}): {err_msg}")
+                elif response.status_code != 200:
+                     # Other errors
+                    content = await response.aread()
+                    raise Exception(f"Ollama Error ({response.status_code}): {content.decode('utf-8')}")
+                else:
+                    # Success - yield stream
+                    async for line in response.aiter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line)
+                                if 'error' in data:
+                                     raise Exception(f"Ollama Stream Error: {data['error']}")
+                                     
+                                if 'message' in data:
+                                    msg = data['message']
+                                    val_thinking = msg.get('thinking', '')
+                                    val_content = msg.get('content', '')
+                                    
+                                    if val_thinking:
+                                        yield {"type": "think", "content": val_thinking}
+                                    elif val_content:
+                                        yield {"type": "content", "content": val_content}
 
-                        if data.get('done', False):
-                            break
-                    except json.JSONDecodeError:
-                        continue
+                                if data.get('done', False):
+                                    break
+                            except json.JSONDecodeError:
+                                continue
+        except httpx.ConnectError as e:
+             raise Exception(f"Could not connect to Ollama: {e}")
+
+        # Attempt 2 (Fallback)
+        if should_retry_without_think:
+            del payload["think"]
+            async with client.stream('POST', url, json=payload) as response:
+                if response.status_code != 200:
+                     content = await response.aread()
+                     raise Exception(f"Ollama Error ({response.status_code}) on retry: {content.decode('utf-8')}")
+                     
+                async for line in response.aiter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line)
+                                if 'error' in data:
+                                     raise Exception(f"Ollama Stream Error: {data['error']}")
+
+                                if 'message' in data:
+                                    msg = data['message']
+                                    # No thinking here obviously
+                                    val_content = msg.get('content', '')
+                                    if val_content:
+                                        yield {"type": "content", "content": val_content}
+
+                                if data.get('done', False):
+                                    break
+                            except json.JSONDecodeError:
+                                continue
 
 async def generate_search_query(model: str, user_query: str) -> str:
     """
