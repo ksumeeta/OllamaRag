@@ -91,7 +91,6 @@ def get_docling_document(file_path: str):
             except Exception as read_err:
                  logger.error(f"Failed to read file as text: {read_err}")
                  raise read_err
-
         return conv_res.document
     except Exception as e:
         logger.error(f"Docling conversion failed for {file_path}: {e}")
@@ -116,8 +115,8 @@ def process_and_index_document(file_path: str, doc_id: str):
     try:
         doc = get_docling_document(file_path)
         
-        # logger.info(f"Document converted. Pages: {len(doc.pages)}")
-        logger.info(f"Document converted. Pages: {len(doc.pages)}\n-------------\n{doc.export_to_markdown()}\n-------------\n")
+        logger.info(f"Document converted. Pages: {len(doc.pages)}")
+        # logger.info(f"Document converted. Pages: {len(doc.pages)}\n-------------\n{doc.export_to_markdown()}\n-------------\n")
     except Exception as e:
         logger.error(f"Docling conversion failed: {e}")
         raise e

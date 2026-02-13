@@ -165,6 +165,7 @@ async def send_message(
             web_context = ""
             if message_in.use_web_search:
                 try:
+                    print(f"DEBUG: Started Search Query: {search_query}")
                     search_query = await ollama_service.generate_search_query(message_in.model_used or "llama3", user_msg_content)
                     print(f"DEBUG: Generated Search Query: {search_query}")
                     # Yield a status update if frontend supports it, otherwise just log
@@ -218,9 +219,16 @@ async def send_message(
                             is_active=True
                         )
                         new_db.add(rag_ctx_entry)
-                    
-                    rag_context = "\n\nRelevant Context from Documents:\n" + "\n".join(rag_context_parts)
                     new_db.commit()
+                
+                # Append complete markdown of the document(s)
+                if chat_attachments:
+                    full_docs_md = ""
+                    for att in chat_attachments:
+                        if att.extracted_text:
+                            full_docs_md += f"\n\n--- FULL DOCUMENT: {att.file_name} ---\n{att.extracted_text}\n"
+
+                rag_context = "\n\nRelevant Context from Documents:\n" + full_docs_md  + "\n".join(rag_context_parts)
 
             # D. Construct Final Prompt & Save Augmented Content
             final_content = user_msg_content
@@ -242,10 +250,9 @@ async def send_message(
             history = new_db.query(models.Message).filter(
                 models.Message.chat_id == message_in.chat_id,
                 models.Message.id != user_msg.id 
-            ).order_by(models.Message.created_at.desc()).limit(5).all()
+            ).order_by(models.Message.created_at.desc()).limit(1).all()
             
-            history = history[::-1]
-            
+            # history = history[::-1]
             ollama_messages = []
             for msg in history:
                 ollama_messages.append({
