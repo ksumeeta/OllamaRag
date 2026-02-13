@@ -214,14 +214,13 @@ async def send_message(
                 chat_attachments = new_db.query(models.Attachment).filter(models.Attachment.chat_id == message_in.chat_id).all()
                 doc_ids = [str(att.id) for att in chat_attachments]
                 
+                chunks = []
                 if doc_ids:
                     # Note: retrieve_relevant_chunks uses its own VectorSessionLocal, so it's fine
                     chunks = ingestion.retrieve_relevant_chunks(user_msg_content, doc_ids)
-                else:
-                    chunks = []
                 
+                rag_context_parts = []
                 if chunks:
-                    rag_context_parts = []
                     for chunk in chunks:
                         text = chunk.get("text", "")
                         doc_name = chunk.get("meta", {}).get("filename", "Unknown Document")
@@ -238,24 +237,18 @@ async def send_message(
                         new_db.add(rag_ctx_entry)
                     new_db.commit()
                 
-                # Append complete markdown of the document(s)
-                if chat_attachments:
-                    full_docs_md = ""
-                    for att in chat_attachments:
-                        if att.extracted_text:
-                            full_docs_md += f"\n\n--- FULL DOCUMENT: {att.file_name} ---\n{att.extracted_text}\n"
-
-                rag_context = "\n\nRelevant Context from Documents:\n" + full_docs_md  + "\n".join(rag_context_parts)
+                if rag_context_parts:
+                    rag_context = "\n\nRelevant Context from Documents:\n" + "\n".join(rag_context_parts)
 
             # D. Construct Final Prompt & Save Augmented Content
+            # REMOVED system_instruction from here. It will be sent as a separate message.
             final_content = user_msg_content
             context_block = f"{attached_context}{rag_context}{web_context}"
             
             if context_block:
-                final_content = f"{system_instruction}User uploaded files/context. Use the following context to answer.\n\nContext:\n{context_block}\n\nUser Query: {user_msg_content}"
-            elif system_instruction:
-                final_content = f"{system_instruction}\nUser Query: {user_msg_content}"            
-
+                final_content = f"Use the following context to answer.\n\nContext:\n{context_block}\n\nUser Query: {user_msg_content}"
+            # Else: just user query. logic for system instruction is handled via role: system
+            
             # Update User Message with Augmented Content
             # Re-fetch user_msg attached to this session or update by ID
             user_msg_ref = new_db.query(models.Message).filter(models.Message.id == user_msg.id).first()
@@ -264,22 +257,50 @@ async def send_message(
                 new_db.commit()
 
             # 4. History (Last Messages)
+            # Fetch last N messages (e.g. 10) for context
             history = new_db.query(models.Message).filter(
                 models.Message.chat_id == message_in.chat_id,
                 models.Message.id != user_msg.id 
-            ).order_by(models.Message.created_at.desc()).limit(1).all()
+            ).order_by(models.Message.created_at.desc()).limit(10).all()
+            
+            # Reverse history to be Chronological (Oldest -> Newest)
+            history_chronological = list(reversed(history))
             
             ollama_messages = []
-            for msg in history:
+            
+            # Add System Message FIRST
+            if system_instruction:
                 ollama_messages.append({
-                    "role": msg.role,
-                    "content": msg.content
+                    "role": "system",
+                    "content": system_instruction.strip()
                 })
             
+            # Add History
+            for msg in history_chronological:
+                role = msg.role
+                content = msg.content
+                # Use augmented_content if available (contains RAG context from previous turns)
+                # However, for history, maybe we want just the clean content? 
+                # Usually standard practice is to send what was actually "said". 
+                # If we send augmented content, we might re-inject old context.
+                # Let's stick to content for now to be safe and avoid context window explosion, 
+                # unless augmented_content is critical for continuity.
+                # Given RAG is per-turn usually, let's use msg.content.
+                ollama_messages.append({
+                    "role": role,
+                    "content": content
+                })
+            
+            # Add Current User Message
             ollama_messages.append({
                 "role": "user",
                 "content": final_content
             })
+            
+            # Debug Log Final Payload
+            # logger.info(f"Ollama Payload Messages ({len(ollama_messages)} msgs):")
+            # for i, m in enumerate(ollama_messages):
+            #     logger.info(f"  [{i}] Role: {m['role']}, Content Preview: {m['content'][:50]}...")
             
             # 5. Stream LLM
             full_content = []

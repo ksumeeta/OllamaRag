@@ -70,10 +70,10 @@ async def stream_chat(model: str, messages: List[Dict], enable_think: bool = Fal
             for i, msg in enumerate(value):
                 role = msg.get('role', 'unknown')
                 content = str(msg.get('content', ''))
-                logger.info(f"  [{i}] Role: {role}, Content Preview: {content[:50]}...")
+                logger.info(f"  [{i}] Role: {role}, Content: {content[:500]}...")
         else:
             val_str = str(value)
-            logger.info(f"Key: {key}, Value Preview: {val_str[:50]}...")
+            logger.info(f"Key: {key}, Value: {val_str[:500]}...")
     logger.info("---------------------------------")
 
     async with httpx.AsyncClient(timeout=120.0) as client:
@@ -158,7 +158,7 @@ async def generate_search_query(model: str, user_query: str) -> str:
     Generate a concise search query based on the user's prompt.
     """
     messages = [
-        {"role": "system", "content": "You are a helper. Generate a single, concise web search query for the user's request. Return ONLY the query text, no quotes or explanations."},
+        {"role": "system", "content": "You are a helpfull assistant. Generate a single, concise web search query for the user's request. Return ONLY the query text, no quotes or explanations."},
         {"role": "user", "content": user_query}
     ]
     # Non-streaming call
