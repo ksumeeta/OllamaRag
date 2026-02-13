@@ -124,8 +124,9 @@ def process_and_index_document(file_path: str, doc_id: str):
 
     # 2. Chunking (Hybrid)
     chunker = HybridChunker(
-        tokenizer="sentence-transformers/all-MiniLM-L6-v2", # Default, or align with nomic if possible
-        merge_peers=True
+        tokenizer="nomic-ai/nomic-embed-text-v1.5", 
+        # merge_peers=True,
+        max_tokens=350 # Approx 1500-1600 characters
     )
     chunks_iter = chunker.chunk(doc)
     chunks = list(chunks_iter)
@@ -139,9 +140,10 @@ def process_and_index_document(file_path: str, doc_id: str):
     vector_db = VectorSessionLocal()
     try:
         for i, chunk in enumerate(chunks):
-            # logger.info(f"\n--------------Processing chunk {i+1}/{len(chunks)}")
-            logger.info(f"\nProcessing chunk {i+1}/{len(chunks)} chunk.text:\n-------------\n{chunk.text}\n--------------------\n")    
+            logger.info(f"\n--------------Processing chunk {i+1}/{len(chunks)}")
+            # logger.info(f"\nProcessing chunk {i+1}/{len(chunks)} chunk.text:\n-------------\n{chunk.text}\n--------------------\n")    
             text_content = chunk.text
+            # text_content = chunker.contextualize(chunk=chunk)
             meta = chunk.meta.export_json_dict()
             
             # Embed
